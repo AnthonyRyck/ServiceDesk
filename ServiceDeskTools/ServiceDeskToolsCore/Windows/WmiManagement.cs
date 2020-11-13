@@ -1,6 +1,7 @@
 ﻿using ServiceDeskToolsCore.Entities;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Management;
 using System.Text;
@@ -12,12 +13,13 @@ namespace ServiceDeskToolsCore.Windows
     {
         #region Properties
 
-        //private readonly ManagementScope _scope;
         private readonly ILogger _logger;
+		private readonly ConnectionOptions _connectionOption;
 
         private const string WQL_OPERATING_SYSTEM = "SELECT version FROM Win32_OperatingSystem";
-
-        private readonly ConnectionOptions _connectionOption;
+		private const string INSTALL_DATE = "InstallDate";
+		private const string VERSION = "Version";
+		private const string NAME = "name";
 
         #endregion
 
@@ -204,14 +206,11 @@ namespace ServiceDeskToolsCore.Windows
         {
             return Task.Factory.StartNew(() =>
             {
-                string messageRetour = string.Empty;
-                bool isAppOk = false;
-
                 List<Software> softwares = new List<Software>();
 
                 try
                 {
-                    string queryWql = "Select * from Win32_Product";
+                    string queryWql = "Select name,version from Win32_Product";
                     ObjectQuery query = new ObjectQuery(queryWql);
 
                     var scope = CreateScope(machineName);
@@ -229,45 +228,28 @@ namespace ServiceDeskToolsCore.Windows
                             {
                                 var temp = item;
 
-                                // Test sur la date d'installation.
-                                //string dateInstall = item["InstallDate"].ToString().Split('.').First();
-                                //DateTime dateInstallation = DateTime.ParseExact(dateInstall,
-                                //                                                "yyyyMMddHHmmss",
-                                //                                                CultureInfo.InvariantCulture);
+								// Test sur la date d'installation.
+								string dateInstall = item[INSTALL_DATE].ToString().Split('.').First();
+								DateTime dateInstallation = DateTime.ParseExact(dateInstall,
+																				"yyyyMMddHHmmss",
+																				CultureInfo.InvariantCulture);
 
-                                //// Test sur Version
-                                //// si versionSeuil = NULL - pas de test sur la version.
-                                //if (!string.IsNullOrEmpty(versionSeuil))
-                                //{
-                                //    string versionApplication = item["Version"].ToString();
-                                //    string message = "--> " + applicationName + " : " + versionApplication;
+								string versionApplication = item[VERSION].ToString();
 
-                                //    Version versionInstalle = new Version(versionApplication);
-                                //    Version versionToTest = new Version(versionSeuil);
+                                string applicationName = item[NAME].ToString();
 
-                                //    if (versionInstalle.CompareTo(versionToTest) < 0)
-                                //    {
-                                //        _logger.Error(message);
-                                //        isAppOk = false;
-                                //    }
-                                //    else
-                                //    {
-                                //        _logger.Success(message);
-                                //        isAppOk = true;
-                                //    }
-                                //}
-                                //else
-                                //{
-                                //    _logger.Success("--> " + applicationName + " PRESENT");
-                                //    isAppOk = true;
-                                //}
-                            }
+                                softwares.Add(new Software()
+                                {
+                                    ApplicatioName = applicationName,
+                                    VersionApplication = versionApplication
+                                });
+							}
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("Erreur sur la récupération de la liste des applications : ");
+                    _logger.Error("Erreur sur la récupération de la liste des applications : ", ex);
                 }
 
                 return softwares;
@@ -309,9 +291,7 @@ namespace ServiceDeskToolsCore.Windows
                 }
             });
         }
-
         
-
         #endregion
 
         #region Private methods
