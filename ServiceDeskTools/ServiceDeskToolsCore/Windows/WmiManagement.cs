@@ -23,20 +23,16 @@ namespace ServiceDeskToolsCore.Windows
 
         #region Constructeur
 
-        public WmiManagement(string machineName, string loginAdmin, string password, ILogger logger)
-        {
-            ConnectionOptions connectionOption = new ConnectionOptions();
-            connectionOption.Username = @"DR-CPT\" + loginAdmin;
-            connectionOption.Password = password;
-
-            //_scope = new ManagementScope(@"\\" + machineName + @"\ROOT\cimv2", connectionOption);
-            _logger = logger;
-        }
-
+        /// <summary>
+        /// Constructeur sans machine.
+        /// </summary>
+        /// <param name="loginAdmin">Login avec le nom de domaine "DOMAINE\"</param>
+        /// <param name="password"></param>
+        /// <param name="logger"></param>
         public WmiManagement(string loginAdmin, string password, ILogger logger)
         {
             _connectionOption = new ConnectionOptions();
-            _connectionOption.Username = @"DR-CPT\" + loginAdmin;
+            _connectionOption.Username = loginAdmin;
             _connectionOption.Password = password;
 
             _logger = logger;
