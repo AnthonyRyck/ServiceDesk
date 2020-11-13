@@ -55,6 +55,19 @@ Utilisation :
 ```csharp
 var wmiManager = new WmiManagement(yourLoginAdmin, yourPasswordAdmin, logger);
 List<Software> softwares = await wmiManager.GetListSofware("computerName");
+
+// vérification de la présence d'un répertoire
+string pathDirectory = @"C:\\Your\\Path\\Directory";
+string wqlDirectory = string.Format(@"SELECT * FROM Win32_Directory Where Name='{0}'", pathDirectory);
+
+if(await wmiManager.IsDirectoryExistAsync(nomMachine, wqlDirectory))
+{
+  logger.Success(pathDirectory + " exist");
+}
+else
+{
+  logger.Warn(pathDirectory + " not exist");
+}
 ```
 
 
