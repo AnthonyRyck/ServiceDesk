@@ -43,6 +43,39 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 
 		#region Public methods
 
+		#region User
+
+		/// <summary>
+		/// Permet d'avoir le SID d'un utilisateur.
+		/// </summary>
+		/// <param name="user">UserPrincipal</param>
+		/// <returns></returns>
+		public Task<string> GetUserSid(UserPrincipal user)
+		{
+			return Task.Factory.StartNew(() =>
+			{
+				string sid = string.Empty;
+
+				try
+				{
+					Logger?.Debug("GetUserSid - utilisateur : " + user.Name);
+
+					if (user != null)
+					{
+						sid = user.Sid.ToString();
+					}
+				}
+				catch (Exception exception)
+				{
+					Logger?.Error("Error sur GetUserSid : " + user.Name, exception);
+					return sid;
+				}
+
+				Logger?.Info("SID : " + sid);
+				return sid;
+			});
+		}
+
 		/// <summary>
 		/// Permet d'avoir le SID d'un utilisateur.
 		/// </summary>
@@ -113,14 +146,43 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 					var tempGroups = user.GetGroups();
 					retourGroups = tempGroups.Select(x => x).ToList();
 				}
-                else
-                {
+				else
+				{
 					Logger?.Warn("Aucun utilisateur de trouvé avec : " + userName);
-                }
+				}
 			}
 			catch (Exception exception)
 			{
 				Logger?.Error("Erreur sur GetUserGroup - nom utilisateur : " + userName, exception);
+				Logger?.Warn("Possible que votre login Admin/MDP ne soit pas bon, ou valide.");
+			}
+
+			return retourGroups?.Select(x => x.Name).ToList();
+		}
+
+		/// <summary>
+		/// Retourne ou l'utilisateur est.
+		/// </summary>
+		/// <param name="userName">Nom d'utilisateur</param>
+		public IEnumerable<string> GetUserGroups(UserPrincipal user)
+		{
+			List<Principal> retourGroups = new List<Principal>();
+
+			try
+			{
+				if (user != null)
+				{
+					var tempGroups = user.GetGroups().ToList();
+					//retourGroups = tempGroups.ToList();
+				}
+				else
+				{
+					Logger?.Warn("Aucun utilisateur de trouvé avec : " + user.Name);
+				}
+			}
+			catch (Exception exception)
+			{
+				Logger?.Error("Erreur sur GetUserGroup - nom utilisateur : " + user.Name, exception);
 				Logger?.Warn("Possible que votre login Admin/MDP ne soit pas bon, ou valide.");
 			}
 
@@ -136,6 +198,18 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 		public bool IsUserMemberOf(string userName, string groupName)
 		{
 			var groupeUser = GetUserGroups(userName);
+			return groupeUser.Any(x => groupName == x);
+		}
+
+		/// <summary>
+		/// Fait un test pour savoir si l'utilisateur est dans le groupe donné.
+		/// </summary>
+		/// <param name="user"></param>
+		/// <param name="groupName"></param>
+		/// <returns></returns>
+		public bool IsUserMemberOf(UserPrincipal user, string groupName)
+		{
+			var groupeUser = GetUserGroups(user);
 			return groupeUser.Any(x => groupName == x);
 		}
 
@@ -192,37 +266,10 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 		}
 
 		/// <summary>
-		/// Récupère la liste des groupes pour une machine.
-		/// </summary>
-		/// <param name="machineName"></param>
-		/// <returns></returns>
-		public IEnumerable<string> GetComputerGroupes(string machineName)
-		{
-			IEnumerable<Principal> retourGroups = null;
-
-			try
-			{
-				ComputerPrincipal computer = GetComputer(machineName);
-
-				if (computer != null)
-				{
-					var tempGroups = computer.GetGroups();
-					retourGroups = tempGroups.Select(x => x).ToList();
-				}
-			}
-			catch (Exception)
-			{
-				throw;
-			}
-
-			return retourGroups?.Select(x => x.Name).ToList();
-		}
-
-		/// <summary>
 		/// Ajout un utilisateur dans un groupe donné.
 		/// </summary>
 		/// <param name="groupName"></param>
-		/// <param name="userName"></param>
+		/// <param name="user"></param>
 		public void AddUserToGroup(string groupName, UserPrincipal user)
 		{
 			try
@@ -231,27 +278,61 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 
 				if (group != null)
 				{
-					if (user != null)
+					if (!group.Members.Contains(user))
 					{
-						Logger?.Info("Ajout de " + user.Name + " dans le groupe " + groupName);
+						Logger?.Info("Ajout de " + user.Name+ " dans le groupe " + groupName);
 						group.Members.Add(user);
 						group.Save();
 						group.Dispose();
 					}
 					else
 					{
-						Logger?.Warn("L'utilisateur : " + user.Name + " n'existe pas !");
+						Logger?.Warn(user.Name + " est déjà dans le groupe " + groupName);
+						throw new UserExistInGroupException(user.Name + " est déjà dans le groupe " + groupName);
 					}
 				}
 				else
 				{
 					Logger?.Warn("Le groupe : " + groupName + " n'existe pas !");
+					throw new GroupActiveDirectoryNotExistException("Le groupe : " + groupName + " n'existe pas !");
 				}
 			}
 			catch (Exception exception)
 			{
 				Logger?.Error("Error AddUserToGroup - groupName : " + groupName
 				+ " - userName : " + user.Name, exception);
+
+				throw;
+			}
+		}
+
+		/// <summary>
+		/// Ajout un utilisateur dans un groupe donné.
+		/// </summary>
+		/// <param name="group"></param>
+		/// <param name="user"></param>
+		public void AddUserToGroup(GroupPrincipal group, UserPrincipal user)
+		{
+			try
+			{
+				if (!group.Members.Contains(user))
+				{
+					Logger?.Info("Ajout de " + user.Name + " dans le groupe " + group.Name);
+					group.Members.Add(user);
+					group.Save();
+				}
+				else
+				{
+					Logger?.Warn(user.Name + " est déjà dans le groupe " + group.Name);
+					throw new UserExistInGroupException(user.Name + " est déjà dans le groupe " + group.Name);
+				}
+			}
+			catch (Exception exception)
+			{
+				Logger?.Error("Error AddUserToGroup - groupName : " + group.Name
+				+ " - userName : " + user.Name, exception);
+
+				throw;
 			}
 		}
 
@@ -310,7 +391,7 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 		/// Retire un utilisateur dans un groupe donné.
 		/// </summary>
 		/// <param name="groupName"></param>
-		/// <param name="userName"></param>
+		/// <param name="user"></param>
 		public void RemoveUserToGroup(string groupName, UserPrincipal user)
 		{
 			try
@@ -319,28 +400,93 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 
 				if (group != null)
 				{
-					if (user != null)
+					if (group.Members.Contains(user))
 					{
-						Logger?.Info("Suppression de " + user.Name + " du groupe " + groupName);
+						Logger?.Info("Suppresion de " + user.Name + " du groupe " + groupName);
+
 						group.Members.Remove(user);
 						group.Save();
 						group.Dispose();
 					}
 					else
 					{
-						Logger?.Warn("L'utilisateur : " + user.Name + " n'existe pas !");
+						Logger?.Warn(user.Name + " n'est pas dans le groupe " + groupName);
+						throw new UserNotInGroupException(user.Name + " n'est pas dans le groupe " + groupName);
 					}
 				}
 				else
 				{
 					Logger?.Warn("Le groupe : " + groupName + " n'existe pas !");
+					throw new GroupActiveDirectoryNotExistException("Le groupe : " + groupName + " n'existe pas !");
 				}
 			}
 			catch (Exception exception)
 			{
 				Logger?.Error("Error RemoveUserToGroup - groupName : " + groupName
 				+ " - userName : " + user.Name, exception);
+
+				throw;
 			}
+		}
+
+		/// <summary>
+		/// Retire un utilisateur dans un groupe donné.
+		/// </summary>
+		/// <param name="groupName"></param>
+		/// <param name="user"></param>
+		public void RemoveUserToGroup(GroupPrincipal group, UserPrincipal user)
+		{
+			try
+			{
+				if (group.Members.Contains(user))
+				{
+					Logger?.Info("Suppresion de " + user.Name + " du groupe " + group.Name);
+
+					group.Members.Remove(user);
+					group.Save();
+				}
+				else
+				{
+					Logger?.Warn(user.Name + " n'est pas dans le groupe " + group.Name);
+					throw new UserNotInGroupException(user.Name + " n'est pas dans le groupe " + group.Name);
+				}
+			}
+			catch (Exception exception)
+			{
+				Logger?.Error("Error RemoveUserToGroup - groupName : " + group.Name
+				+ " - userName : " + user.Name, exception);
+
+				throw;
+			}
+		}
+
+		#endregion
+
+		/// <summary>
+		/// Récupère la liste des groupes pour une machine.
+		/// </summary>
+		/// <param name="machineName"></param>
+		/// <returns></returns>
+		public IEnumerable<string> GetComputerGroupes(string machineName)
+		{
+			IEnumerable<Principal> retourGroups = null;
+
+			try
+			{
+				ComputerPrincipal computer = GetComputer(machineName);
+
+				if (computer != null)
+				{
+					var tempGroups = computer.GetGroups();
+					retourGroups = tempGroups.Select(x => x).ToList();
+				}
+			}
+			catch (Exception)
+			{
+				throw;
+			}
+
+			return retourGroups?.Select(x => x.Name).ToList();
 		}
 
 		/// <summary>
@@ -582,11 +728,13 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 			{
 				Logger?.Info("GetUserPrincipal - Recherche de : " + name);
 
-				// Recherche de l'utilisateur avec son nom (jean.dupont)
-				UserPrincipal user = new UserPrincipal(_adConnection);
-				user.Name = name;
+				UserPrincipal userPrincipal = new UserPrincipal(_adConnection);
 
-				using (PrincipalSearcher search = new PrincipalSearcher(user))
+				// Recherche de l'utilisateur avec son nom (jean.dupont)
+				//UserPrincipal user = new UserPrincipal(_adConnection);
+				userPrincipal.Name = name;
+
+				using (PrincipalSearcher search = new PrincipalSearcher(userPrincipal))
 				{
 					result = (UserPrincipal)search.FindOne();
 				}
@@ -595,10 +743,22 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 				if (result == null)
 				{
 					// Recherche de l'utilisateur avec un nom (j.dupont)
-					UserPrincipal userSamAccount = new UserPrincipal(_adConnection);
-					userSamAccount.SamAccountName = name;
+					userPrincipal = new UserPrincipal(_adConnection);
+					userPrincipal.SamAccountName = name;
 
-					using (PrincipalSearcher search = new PrincipalSearcher(userSamAccount))
+					using (PrincipalSearcher search = new PrincipalSearcher(userPrincipal))
+					{
+						result = (UserPrincipal)search.FindOne();
+					}
+				}
+
+				if(result == null)
+				{
+					// Recherche de l'utilisateur avec un nom (j.dupont)
+					userPrincipal = new UserPrincipal(_adConnection);
+					userPrincipal.UserPrincipalName = name;
+
+					using (PrincipalSearcher search = new PrincipalSearcher(userPrincipal))
 					{
 						result = (UserPrincipal)search.FindOne();
 					}
