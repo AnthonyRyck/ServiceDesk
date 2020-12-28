@@ -46,6 +46,17 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 		#region User
 
 		/// <summary>
+		/// Vérifie que l'utilisateur existe bien dans l'AD
+		/// </summary>
+		/// <param name="userName"></param>
+		/// <returns></returns>
+		public bool IsUserExist(string userName)
+		{
+			var user = GetUser(userName);
+			return user != null;
+		}
+
+		/// <summary>
 		/// Permet d'avoir le SID d'un utilisateur.
 		/// </summary>
 		/// <param name="user">UserPrincipal</param>
@@ -460,7 +471,124 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 			}
 		}
 
+		/// <summary>
+		/// Supprime le lecteur réseau de l'utilisateur donnée.
+		/// </summary>
+		public void RemoveLecteurReseau(string userName, string directory)
+		{
+			var user = GetUser(userName);
+
+			if (user != null)
+			{
+				if (user.HomeDirectory == directory)
+				{
+					user.HomeDirectory = null;
+					user.HomeDrive = null;
+				}
+				else
+				{
+					throw new HomeDirectoryActiveDirectoryDifferentException("Lecteur réseau de l'utilisateur : " + userName + " est : " + (user.HomeDirectory ?? "null"));
+				}
+			}
+			else
+			{
+				throw new UserNotExistException("Utilisateur " + userName + " n'existe pas");
+			}
+		}
+
+		public void RemoveLecteurReseau(UserPrincipal user, string directory)
+		{
+			if (user.HomeDirectory == directory)
+			{
+				user.HomeDirectory = null;
+				user.HomeDrive = null;
+			}
+			else
+			{
+				throw new HomeDirectoryActiveDirectoryDifferentException("Lecteur réseau de l'utilisateur est : " + (user.HomeDirectory ?? "null"));
+			}
+		}
+
+
+		public HomeDirectory GetLecteurReseau(string userName)
+		{
+			var user = GetUser(userName);
+
+			HomeDirectory home = null;
+
+			if (user != null)
+			{
+				home = new HomeDirectory()
+				{
+					LettreReseau = user.HomeDrive,
+					Directory = user.HomeDirectory
+				};
+			}
+			else
+			{
+				throw new UserNotExistException("Utilisateur " + userName + " n'existe pas");
+			}
+
+			return home;
+		}
+
+		public HomeDirectory GetLecteurReseau(UserPrincipal user)
+		{
+			HomeDirectory home = new HomeDirectory()
+			{
+				LettreReseau = user.HomeDrive,
+				Directory = user.HomeDirectory
+			};
+			
+			return home;
+		}
+
+
+		public void SetLecteurReseau(string userName, string lettreReseau, string directory)
+		{
+			var user = GetUser(userName);
+
+			if (user != null)
+			{
+				user.HomeDrive = lettreReseau;
+				user.HomeDirectory = directory;
+
+				user.Save();
+			}
+			else
+			{
+				throw new UserNotExistException("Utilisateur " + userName + " n'existe pas");
+			}
+		}
+
+		public void SetLecteurReseau(UserPrincipal user, string lettreReseau, string directory)
+		{
+			try
+			{
+				user.HomeDrive = lettreReseau;
+				user.HomeDirectory = directory;
+				user.Save();
+			}
+			catch (Exception ex)
+			{
+				throw;
+			}
+		}
+
 		#endregion
+
+		#region Computer
+
+		/// <summary>
+		/// Vérifie que l'utilisateur existe bien dans l'AD.
+		/// </summary>
+		/// <param name="machineName"></param>
+		/// <returns></returns>
+		public bool IsComputerExist(string machineName)
+		{
+			var machine = GetComputer(machineName);
+			return machine != null;
+		}
 
 		/// <summary>
 		/// Récupère la liste des groupes pour une machine.
@@ -602,93 +730,9 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 			}
 		}
 
-		/// <summary>
-		/// Vérifie que l'utilisateur existe bien dans l'AD
-		/// </summary>
-		/// <param name="userName"></param>
-		/// <returns></returns>
-		public bool IsUserExist(string userName)
-		{
-			var user = GetUser(userName);
-			return user != null;
-		}
+		#endregion
 
-		/// <summary>
-		/// Vérifie que l'utilisateur existe bien dans l'AD.
-		/// </summary>
-		/// <param name="machineName"></param>
-		/// <returns></returns>
-		public bool IsComputerExist(string machineName)
-		{
-			var machine = GetComputer(machineName);
-			return machine != null;
-		}
-
-		/// <summary>
-		/// Supprime le lecteur réseau de l'utilisateur donnée.
-		/// </summary>
-		public void RemoveLecteurReseau(string userName, string directory)
-		{
-			var user = GetUser(userName);
-
-			if (user != null)
-			{
-				if (user.HomeDirectory == directory)
-				{
-					user.HomeDirectory = null;
-					user.HomeDrive = null;
-				}
-				else
-				{
-					throw new HomeDirectoryActiveDirectoryDifferentException("Lecteur réseau de l'utilisateur : " + userName + " est : " + (user.HomeDirectory ?? "null"));
-				}
-			}
-			else
-			{
-				throw new UserNotExistException("Utilisateur " + userName + " n'existe pas");
-			}
-		}
-
-
-		public HomeDirectory GetLecteurReseau(string userName)
-		{
-			var user = GetUser(userName);
-
-			HomeDirectory home = null;
-
-			if (user != null)
-			{
-				home = new HomeDirectory()
-				{
-					LettreReseau = user.HomeDrive,
-					Directory = user.HomeDirectory
-				};
-			}
-			else
-			{
-				throw new UserNotExistException("Utilisateur " + userName + " n'existe pas");
-			}
-
-			return home;
-		}
-
-
-		public void SetLecteurReseau(string userName, string lettreReseau, string directory)
-		{
-			var user = GetUser(userName);
-
-			if (user != null)
-			{
-				user.HomeDrive = lettreReseau;
-				user.HomeDirectory = directory;
-
-				user.Save();
-			}
-			else
-			{
-				throw new UserNotExistException("Utilisateur " + userName + " n'existe pas");
-			}
-		}
+		#region Group
 
 		/// <summary>
 		/// Permet de tester si le groupe en question existe dans l'AD.
@@ -709,6 +753,31 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 				return group != null;
 			});
 		}
+
+		/// <summary>
+		/// Retourne les informations pour un nom de groupe.
+		/// </summary>
+		/// <param name="groupName"></param>
+		/// <returns></returns>
+		public Task<List<GroupPrincipal>> GetGroupsByName(string groupName)
+		{
+			return Task.Factory.StartNew(() =>
+			{
+				GroupPrincipal groupPrincipal = new GroupPrincipal(_adConnection);
+				groupPrincipal.Name = groupName;
+
+
+				PrincipalSearcher searcher = new PrincipalSearcher(groupPrincipal);
+				searcher.QueryFilter = groupPrincipal;
+
+
+				var result = searcher.FindAll().Cast<GroupPrincipal>();
+
+				return result.ToList();
+			});
+		}
+
+		#endregion
 
 		#endregion
 
@@ -800,8 +869,6 @@ namespace ServiceDeskToolsCore.ActiveDirectory
 
 			return result;
 		}
-
-
 
 		#endregion
 	}

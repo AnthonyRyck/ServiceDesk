@@ -39,7 +39,7 @@ namespace ServiceDeskToolsCore.Windows
             }
         }
 
-        public void ResultGPO(string machinename, string loginAdmin, string pass)
+        public void ResultGPO(string machinename, string loginAdmin, string pass, string loginUser, string pathToResult)
         {
             try
             {
@@ -55,7 +55,7 @@ namespace ServiceDeskToolsCore.Windows
 
                 ManagementClass clas = new ManagementClass(scope, new ManagementPath("Win32_Process"), new ObjectGetOptions());
                 ManagementBaseObject inparams = clas.GetMethodParameters("Create");
-                inparams["CommandLine"] = @"cmd /c GPResult /r /user c.lenert > c:\temp\gpresult.txt";
+                inparams["CommandLine"] = @"cmd /c GPResult /r /user " + loginUser + " > " + pathToResult + "gpresult.txt";
 
                 ManagementBaseObject outparam = clas.InvokeMethod("Create", inparams, null);
             }
