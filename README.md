@@ -1,11 +1,12 @@
 # ServiceDesk
+[![NuGet](https://img.shields.io/nuget/v/Ryck.MoviesLib.svg)](https://www.nuget.org/packages/ServiceDeskTools/)
 **Updated to .Net 5**
 
-Ensemble d'outils pour faire de l'administration à distance pour Windows.
+Set of tools to do remote administration for Windows.
 
 ## Active Directory
 
-Utilisation :
+Use :
 
 ```csharp
 var userActiveDirectory = UserActiveDirectory(adresseAD, loginAdmin, passwordAdmin);
@@ -15,7 +16,7 @@ if(userActiveDirectory.IsUserExist("john.doe"))
 }
 ```
      
-ou avec un Logger
+or with a Logger
 ```csharp
 var userActiveDirectory = UserActiveDirectory(adresseAD, loginAdmin, passwordAdmin, logger);
 if(userActiveDirectory.IsUserExist("john.doe"))
@@ -23,12 +24,12 @@ if(userActiveDirectory.IsUserExist("john.doe"))
   userActiveDirectory.AddUserToGroup("john.doe", "UnidentifiedPersonGroup")
 }
 ```
-En sortie du Logger :    
+Out of the Logger :    
     
-    Ajout de john.doe dans le groupe UnidentifiedPersonGroup
+    Add john.doe in the group UnidentifiedPersonGroup
     
 
-Voici la liste des méthodes pour l'active directory :
+Here is the list of methods for active directory :
 
 ```csharp
 public void AddComputerToGroup(string groupName, ComputerPrincipal computer);
@@ -53,12 +54,12 @@ public void SetLecteurReseau(string userName, string lettreReseau, string direct
 
 ## WMI
 
-Utilisation :
+Use :
 ```csharp
 var wmiManager = new WmiManagement(yourLoginAdmin, yourPasswordAdmin, logger);
 List<Software> softwares = await wmiManager.GetListSofware("computerName");
 
-// vérification de la présence d'un répertoire
+// checking for a directory
 string pathDirectory = @"C:\\Your\\Path\\Directory";
 string wqlDirectory = string.Format(@"SELECT * FROM Win32_Directory Where Name='{0}'", pathDirectory);
 
@@ -74,7 +75,7 @@ else
 
 
 ## ILogger
-Le "logger" est de type `ILogger` dans `ServiceDeskToolsCore.ILogger`:
+The "logger" is type of `ILogger` in `ServiceDeskToolsCore.ILogger`:
 
 ```csharp
 /// <summary>
