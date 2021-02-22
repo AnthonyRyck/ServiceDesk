@@ -1,5 +1,7 @@
 # ServiceDesk
-[![NuGet](https://img.shields.io/nuget/v/Ryck.MoviesLib.svg)](https://www.nuget.org/packages/ServiceDeskTools/)
+[![NuGet](https://img.shields.io/nuget/vpre/ServiceDeskTools.svg)](https://www.nuget.org/packages/ServiceDeskTools/)
+[![Downloads](https://img.shields.io/nuget/dt/ServiceDeskTools.svg)](https://www.nuget.org/packages/ServiceDeskTools)
+
 **Updated to .Net 5**
 
 Set of tools to do remote administration for Windows.
